@@ -2,6 +2,8 @@
 'use strict';
 
 const express = require('express');
+const fs = require('fs');
+const morgan = require('morgan');
 const leExpress = require('letsencrypt-express');
 const createElement = require('react').createElement;
 const render = require('react-dom/server').renderToString;
@@ -124,9 +126,9 @@ silicon_dzor.post(Routes.new_account, json_pr, form_pr, async (req, res) => {
     res.end(replies.fail(replies.invalid_username_already_picked));
     return;
   }
-      
+
   const identifier = uuid_v4();
-  register_email_users[identifier] = {username, identifier}; 
+  register_email_users[identifier] = {username, identifier};
   const verify_link = email_verify_link(identifier);
 
   const hash = await bcrypt_promises.hash(password, 10);
@@ -198,7 +200,7 @@ silicon_dzor.post(Routes.add_tech_event, json_pr, async (req, res) => {
 	    await db_promises
 	    .get(`select * from account where email = $username and is_verified = 1`,
 		 {$username: req.session.username});
-      await db_promises.run(`insert into event values 
+      await db_promises.run(`insert into event values
 ($title, $all_day, $start, $end, $description, $creator)`, {
   $title: b.event_title,
   $all_day: new Date(b.start) === new Date(b.end),
@@ -241,6 +243,19 @@ const lex = leExpress.create({
   challenges: { 'http-01': require('le-challenge-fs').create({ webrootPath: '/tmp/acme-challenges' }) },
   store: require('le-store-certbot').create({ webrootPath: '/tmp/acme-challenges' })
 });
+
+//using morgan
+/*
+app.use(morgan('common', {
+    stream: fs.createWriteStream('./access.log', {flags: 'a'})
+}));
+app.use(morgan('dev'));
+*/
+const accessLogStream = fs.createWriteStream('./access.log', {flags: 'a'})
+app.use(morgan('combined', {stream: accessLogStream}))
+app.get('/', function (req, res) {
+  res.send('')
+})
 
 // handles acme-challenge and redirects to https
 require('http')
